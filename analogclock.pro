@@ -1,8 +1,12 @@
 QT += widgets
+QT += xml
+QT += core
 
-HEADERS       = analogclock.h
+HEADERS       = analogclock.h \
+    cdata.h
 SOURCES       = analogclock.cpp \
-                main.cpp
+                main.cpp \
+    cdata.cpp
 
 QMAKE_PROJECT_NAME = widgets_analogclock
 

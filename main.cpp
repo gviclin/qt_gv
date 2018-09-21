@@ -51,10 +51,130 @@
 #include <QApplication>
 
 #include "analogclock.h"
+#include <QXmlInputSource>
+#include <QXmlStreamReader>
+#include <QtDebug>
+#include "cdata.h"
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+
+    //open GPX File
+    QFile file("../analogclock/Sortie_v_lo_le_midi.gpx");
+    if(!file.open(QFile::ReadOnly | QFile::Text)){
+        qDebug() << "Cannot read file :" << file.errorString();
+        exit(0);
+    }
+
+    QList<CData> list;
+
+    QXmlStreamReader reader(&file);
+    qDebug() << "Start Parsing";
+    if (reader.readNextStartElement())
+    {
+        qDebug()<< "first start element" <<reader.name().toString();
+        if (reader.name() == "gpx")
+        {
+            while (!reader.atEnd())
+            {
+                if (reader.isStartElement() && reader.name()== "trkpt")
+                {
+                    CData item;
+                    QString attribute_value;
+
+                    //Recuperation des 2 attributs
+                    foreach(const QXmlStreamAttribute &attr, reader.attributes())
+                    {
+                        if (attr.name().toString() == QLatin1String("lat"))
+                        {
+                            attribute_value = attr.value().toString();
+                            //qDebug() << " - lat : " << qPrintable(attribute_value);
+                            item.lat = attribute_value.toDouble();
+                        }
+                        if (attr.name().toString() == QLatin1String("lon"))
+                        {
+                            attribute_value = attr.value().toString();
+                            item.lon = attribute_value.toDouble();
+                        }
+                     }
+                    //recuperation des infos à l'intérieur de l'élément
+                    while (!(reader.isEndElement() && reader.name()== "trkpt"))
+                    {
+                        if (reader.isStartElement() && reader.name()== "ele")
+                        {
+                           item.alt = reader.readElementText().toInt();
+                        }
+                        if (reader.isStartElement() && reader.name()== "time")
+                        {
+                           QStringList lst = reader.readElementText().split("T");
+                           item.day =  QDate::fromString(lst.at(0),"yyyy-MM-dd");  //2018-09-17T10:19:56Z
+                           item.hours = QTime::fromString(lst.at(1).split("Z").at(0),"hh:mm:ss");
+                        }
+                        if (reader.isStartElement() && reader.name()== "atemp")
+                        {
+                           item.temp =  reader.readElementText().toInt();
+                        }
+                        if (reader.isStartElement() && reader.name()== "hr")
+                        {
+                           item.bpm = reader.readElementText().toInt();
+                        }
+                        if (reader.isStartElement() && reader.name()== "cad")
+                        {
+                           item.cad = reader.readElementText().toInt();
+                        }
+                        reader.readNext();
+                    }
+                   //add element in the list
+                    list.append(item);
+                }
+                reader.readNext();
+            }
+
+            QList<CData>::iterator i;
+            qDebug()<<"Number of elements <"<<list.size()<<">";
+            for (i = list.begin(); i!=list.end(); ++i)
+            {
+                CData item = *i;
+                qDebug()<< "Point : lat "<< (item.lat)
+                        << ", lon "<< (item.lon)
+                        << ", hr "<< (item.bpm)
+                        << ", alt "<< (item.alt)
+                        << ", temp "<< (item.temp)
+                        << ", cad "<< (item.cad)
+                        << ", day "<< (item.day.toString())
+                        << ", hours "<< (item.hours.toString());
+             }
+
+
+            /*while(reader.readNextStartElement())
+            {
+                qDebug() << "reader : " << reader.name();
+                if(reader.name() == "trkpt")
+                {
+                    qDebug("trkpt found");
+                    while(reader.readNextStartElement())
+                    {
+                        if (reader.name() == "time")
+                        {
+                                qDebug() << "time : " << reader.readElementText();
+                        }
+                        else
+                        {
+                            //qDebug() << "name : " << reader.name();
+                            reader.skipCurrentElement();
+                        }
+                     }//trk
+                }
+               // else
+                    //reader.skipCurrentElement();
+            }*/
+        }
+        else
+          qDebug("not gpx element");
+    }
+
+
     AnalogClock clock;
     clock.show();
     return app.exec();

@@ -68,6 +68,8 @@ AnalogClock::AnalogClock(QWidget *parent)
 
     setWindowTitle(tr("Analog Clock"));
     resize(200, 200);
+
+
 //! [7]
 }
 //! [1] //! [7]
